@@ -3,6 +3,7 @@
 
 .tmp
 .idea
+.claude
 
 tmp
 node_modules
