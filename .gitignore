@@ -1,0 +1,12 @@
+**/*.pem
+**/.DS_Store
+
+.tmp
+.idea
+
+tmp
+node_modules
+allure-report
+allure-results
+
+wdio-appium.log
