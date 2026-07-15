@@ -1,5 +1,3 @@
-import { $ } from '@wdio/globals';
-
 class SideMenuComponent {
   get menuAdmin() { return $('a*=Admin'); }
   get menuPim() { return $('a*=PIM'); }

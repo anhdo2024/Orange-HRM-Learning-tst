@@ -1,4 +1,3 @@
-import { $ } from '@wdio/globals'
 import Page from './BasePage.js';
 
 class DashboardPage extends Page {
@@ -8,6 +7,19 @@ class DashboardPage extends Page {
 
     get dashboardTag() {
         return $('//h6[text()="Dashboard"]');
+    }
+
+    get userDropdown() {
+        return $('.oxd-userdropdown-tab');
+    }
+
+    get logoutLink() {
+        return $('//a[text()="Logout"]');
+    }
+
+    async logout() {
+        await this.userDropdown.click();
+        await this.logoutLink.click();
     }
 }
 

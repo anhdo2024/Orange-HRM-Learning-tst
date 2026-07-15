@@ -1,4 +1,3 @@
-import { $ } from '@wdio/globals'
 import Page from './BasePage.js';
 
 class EmployeeListPage extends Page {
