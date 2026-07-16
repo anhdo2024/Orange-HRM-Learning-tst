@@ -38,7 +38,7 @@ pnpm install
 pnpm run wdio
 
 # 3. Run a specific spec
-npx wdio run ./wdio.conf.js --spec ./test/specs/Login.e2e.js
+npx wdio run ./wdio.conf.js --spec ./test/specs/Login.js
 ```
 
 > **Note:** the `specs` field in [`wdio.conf.js`](wdio.conf.js) controls which specs run with `pnpm run wdio`. To run a different file, edit `specs` or use the `--spec` flag as shown above.
@@ -60,8 +60,7 @@ npx allure open allure-report
 Orange-HRM-Learning/
 ├── test/
 │   ├── specs/                    # Test specs (Mocha describe/it)
-│   │   ├── Login.js              # Basic login demo
-│   │   ├── Login.e2e.js          # Login Module — 22 test cases (from Excel test cases)
+│   │   ├── Login.js              # Login module
 │   │   └── EmployeeList.js       # PIM — employee search
 │   └── pageobjects/              # Page Objects (POM)
 │       ├── BasePage.js           # Base class: navigation via browser.url()
@@ -91,6 +90,48 @@ Page objects in `test/pageobjects/` follow a consistent convention:
 4. **Do NOT import `$`, `$$`, `browser`, `expect` from `@wdio/globals`** — they are global variables injected automatically by WebdriverIO. (Under pnpm, `@wdio/globals` is not hoisted, so importing it directly fails with `Cannot find module`.)
 5. **Specs only call page object methods** — never use `$()` directly in a spec.
 
+### Element selector naming
+
+Name each locator getter as **`descriptor` + `Suffix`** in camelCase, where the suffix marks the GUI control type. This makes the control type obvious at a glance.
+
+```js
+get usernameTxb()        { return $('//input[@name="username"]'); }  // text input field
+get loginBtn()           { return $('button[type="submit"]'); }      // button
+get forgotPasswordLnk()  { return $('.orangehrm-login-forgot'); }    // link
+get dashboardLbl()       { return $('//h6[text()="Dashboard"]'); }   // label
+```
+
+Suffix reference:
+
+| GUI Control                   | Suffix          |
+| ----------------------------- | --------------- |
+| Text input field              | `txb`           |
+| Text                          | `txt`           |
+| Text area                     | `txa`           |
+| Placeholder                   | `plh`           |
+| Button                        | `btn`           |
+| Link                          | `lnk`           |
+| Checkbox                      | `ckb`           |
+| Tab                           | `tab`           |
+| Table                         | `tbl`           |
+| File Upload                   | `ful`           |
+| Spinner                       | `spn`           |
+| Radio Button                  | `rad`           |
+| Drop down                     | `ddn`           |
+| List Options inside Drop Down | `opt` \| `opts` |
+| List box                      | `lbx`           |
+| Label                         | `lbl`           |
+| Image                         | `img`           |
+| Icon                          | `icn`           |
+| Navigator                     | `nav`           |
+| Modal Windows (pop-up)        | `pup`           |
+| Pagination                    | `pag`           |
+| iFrame                        | `ifr`           |
+| Progress Bar                  | `prb`           |
+| Calendar                      | `cal`           |
+
+> Some existing getters (e.g. `inputUsername`, `btnSubmit`) predate this convention. New locators should follow the table above.
+
 Example spec:
 
 ```js
@@ -105,6 +146,73 @@ describe("Login Module", () => {
   });
 });
 ```
+
+---
+
+## 📛 File & Spec Naming
+
+| File type        | Pattern              | Location                       | Example                            |
+| ---------------- | -------------------- | ------------------------------ | ---------------------------------- |
+| Spec (test file) | `<Feature>.js`       | `test/specs/`                  | `Login.js`, `EmployeeList.js`      |
+| Page object      | `<Name>Page.js`      | `test/pageobjects/`            | `LoginPage.js`, `DashboardPage.js` |
+| Component        | `<Name>Component.js` | `test/pageobjects/components/` | `SideMenuComponent.js`             |
+
+- Use **PascalCase** for the `<Feature>` / `<Name>` part, matching the class name inside.
+- One page object class per file; the class name matches the file name (`class LoginPage` → `LoginPage.js`).
+
+---
+
+## 🧾 Test Naming & Structure
+
+- **`describe`** = the feature/module under test — e.g. `describe('Login Module', ...)`, `describe('Employee List', ...)`.
+- **`it`** = one test case, titled **`<TC ID>: <short description>`**.
+  - Specs generated from a test-case doc/Excel use the **module-prefixed ID** so it traces back to the source: `it('LOGIN_TC01: đăng nhập thành công với tài khoản hợp lệ', ...)`.
+- One scenario per `it` — keep each test **atomic** and independently runnable.
+- All test callbacks are `async` and every WDIO action is `await`-ed.
+
+```js
+describe("Login Module", () => {
+  it("LOGIN_TC01: logs in successfully with valid credentials", async () => {
+    await LoginPage.open();
+    await LoginPage.login("Admin", "admin123");
+    await expect(DashboardPage.dashboardTag).toBeDisplayed();
+  });
+});
+```
+
+---
+
+## 🔁 Setup Hooks (`before` / `beforeEach`)
+
+Choose the hook based on how much isolation each test needs:
+
+- **`before`** — run **once** per `describe` for shared, read-only setup that tests won't corrupt. Example: log in once, then run several search tests.
+
+  ```js
+  describe("Employee List", () => {
+    before(async () => {
+      await LoginPage.open();
+      await LoginPage.login("Admin", "admin123");
+    });
+    // it(...) blocks reuse the same logged-in session
+  });
+  ```
+
+- **`beforeEach`** — run **before every `it`** to reset state so tests don't depend on each other. Example: the Login suite mixes logged-in and logged-out cases, so it clears the session before each test:
+  ```js
+  beforeEach(async () => {
+    // auth/logout destroys any existing session and returns a fresh login page
+    await browser.url("auth/logout");
+    await LoginPage.inputUsername.waitForDisplayed({ timeout: 10000 });
+  });
+  ```
+
+Guidelines:
+
+- Every `it` must be able to run **on its own** — never rely on a previous test's side effects.
+- Put shared setup in a hook, not copy-pasted into each `it`.
+- Prefer resetting via a fast path (API/URL such as `auth/logout`) over clicking through the UI.
+- Do state cleanup in `after`/`afterEach` when a test creates data that would affect others.
 
 ---
 
