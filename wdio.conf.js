@@ -52,7 +52,12 @@ export const config = {
     capabilities: [{
         // browserName: 'firefox',
         browserName: 'chrome',
-        browserVersion: 'stable'
+        browserVersion: 'stable',
+        'goog:chromeOptions': {
+            args: process.env.CI
+                ? ['--headless=new', '--no-sandbox', '--disable-gpu', '--window-size=1920,1080']
+                : []
+        }
     }],
 
     //
