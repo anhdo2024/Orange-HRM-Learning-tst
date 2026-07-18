@@ -1,3 +1,5 @@
+// import path from 'path';
+
 export const config = {
     //
     // ====================
@@ -21,8 +23,13 @@ export const config = {
     // of the config file unless it's absolute.
     //
     specs: [
-        './test/specs/**/EmployeeList.js'
+        // './test/specs/PersonalDetails.js'
+        './test/specs/Login.js'
     ],
+    // specs: [
+    //     path.resolve('./test/specs/PersonalDetails.js')
+    // ],
+
     // Patterns to exclude.
     exclude: [
         // 'path/to/excluded/files'
