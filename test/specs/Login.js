@@ -20,7 +20,7 @@ describe('Login Module', () => {
     });
 
     // LOGIN_TC02 | Severity: S | Priority: Critical | Bảo mật cơ bản
-    it.only('LOGIN_TC02: đăng nhập thất bại với password sai', async () => {
+    it('LOGIN_TC02: đăng nhập thất bại với password sai', async () => {
         await LoginPage.login(VALID_USER, 'wrongpass');
 
         await expect(LoginPage.errorAlert).toBeDisplayed();
