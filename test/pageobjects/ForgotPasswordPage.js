@@ -1,15 +1,15 @@
 import Page from './BasePage.js';
 
 class ForgotPasswordPage extends Page {
-    get inputUsername() {
+    get usernameTbx() {
         return $('//input[@name="username"]');
     }
 
-    get btnReset() {
+    get resetBtn() {
         return $('button[type="submit"]');
     }
 
-    get btnCancel() {
+    get cancelBtn() {
         return $('.oxd-button--ghost');
     }
 
@@ -25,12 +25,12 @@ class ForgotPasswordPage extends Page {
      * @param {string} username
      */
     async resetPassword(username) {
-        await this.inputUsername.setValue(username);
-        await this.btnReset.click();
+        await this.usernameTbx.setValue(username);
+        await this.resetBtn.click();
     }
 
     async cancel() {
-        await this.btnCancel.click();
+        await this.cancelBtn.click();
     }
 
     /**

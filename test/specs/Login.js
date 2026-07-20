@@ -9,7 +9,7 @@ const INVALID_CREDENTIALS = 'Invalid credentials';
 describe('Login Module', () => {
     beforeEach(async () => {
         await browser.url('auth/logout');
-        await LoginPage.inputUsername.waitForDisplayed({ timeout: 10000 });
+        await LoginPage.usernameTbx.waitForDisplayed({ timeout: 10000 });
     });
 
     // LOGIN_TC01 | Severity: S | Priority: Critical | Happy path
@@ -91,14 +91,14 @@ describe('Login Module', () => {
         await LoginPage.login('<script>alert(1)</script>', 'abc');
 
         expect(await browser.getUrl()).toContain('auth/login');
-        await expect(LoginPage.btnSubmit).toBeDisplayed();
+        await expect(LoginPage.submitBtn).toBeDisplayed();
     });
 
     // LOGIN_TC12 | Severity: B | Priority: Medium | Kiểm tra điều hướng
     it('LOGIN_TC12: Forgot Password — điều hướng', async () => {
         await LoginPage.clickForgotPassword();
 
-        await expect(ForgotPasswordPage.inputUsername).toBeDisplayed();
+        await expect(ForgotPasswordPage.usernameTbx).toBeDisplayed();
         expect(await browser.getUrl()).toContain('requestPasswordResetCode');
     });
 
@@ -117,7 +117,7 @@ describe('Login Module', () => {
         await LoginPage.clickForgotPassword();
         await ForgotPasswordPage.cancel();
 
-        await expect(LoginPage.btnSubmit).toBeDisplayed();
+        await expect(LoginPage.submitBtn).toBeDisplayed();
         expect(await browser.getUrl()).toContain('auth/login');
     });
 
@@ -127,7 +127,7 @@ describe('Login Module', () => {
         await expect(DashboardPage.dashboardTag).toBeDisplayed();
         await DashboardPage.logout();
 
-        await expect(LoginPage.btnSubmit).toBeDisplayed();
+        await expect(LoginPage.submitBtn).toBeDisplayed();
         expect(await browser.getUrl()).toContain('auth/login');
     });
 
@@ -139,7 +139,7 @@ describe('Login Module', () => {
             async () => (await browser.getUrl()).includes('auth/login'),
             { timeout: 10000, timeoutMsg: 'Không bị redirect về login khi chưa đăng nhập' }
         );
-        await expect(LoginPage.btnSubmit).toBeDisplayed();
+        await expect(LoginPage.submitBtn).toBeDisplayed();
     });
 
     // LOGIN_TC17 | Severity: A | Priority: High

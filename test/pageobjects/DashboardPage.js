@@ -9,7 +9,7 @@ class DashboardPage extends Page {
         return $('//h6[text()="Dashboard"]');
     }
 
-    get userDropdown() {
+    get userDdn() {
         return $('.oxd-userdropdown-tab');
     }
 
@@ -18,7 +18,7 @@ class DashboardPage extends Page {
     }
 
     async logout() {
-        await this.userDropdown.click();
+        await this.userDdn.click();
         await this.logoutLink.click();
     }
 }
