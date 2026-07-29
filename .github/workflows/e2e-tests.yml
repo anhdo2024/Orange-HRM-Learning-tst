@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         run: npm install
@@ -45,11 +45,11 @@ jobs:
           path: screenshots/
           retention-days: 7
 
-    # Upload Allure results — luôn chạy để có report dù pass/fail
-  	 - name: Upload Allure results
+      # Upload Allure results — luôn chạy để có report dù pass/fail
+      - name: Upload Allure results
         if: always()
-    	uses: actions/upload-artifact@v4
-    	with:
-      	name: allure-results-${{ matrix.browser }}
-      	path: allure-results/
-      	retention-days: 7
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.browser }}
+          path: allure-results/
+          retention-days: 7
