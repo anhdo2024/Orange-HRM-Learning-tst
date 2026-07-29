@@ -74,7 +74,7 @@ describe('Login Module', () => {
 
     // LOGIN_TC09 | Severity: A | Priority: High | Password luôn case-sensitive
     it('LOGIN_TC09: password phân biệt hoa thường', async () => {
-        await LoginPage.login(VALID_USER, 'Admin123');
+        await LoginPage.login(VALID_USER, 'admin123');
 
         await expect(LoginPage.errorAlert).toBeDisplayed();
         await expect(LoginPage.errorAlert).toHaveText(INVALID_CREDENTIALS);

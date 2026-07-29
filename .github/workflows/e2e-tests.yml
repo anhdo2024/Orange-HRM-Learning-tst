@@ -12,7 +12,7 @@ jobs:
     name: Test on ${{ matrix.browser }}
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Đảm bảo trình duyệt còn lại vẫn tiếp tục chạy dù trình duyệt kia bị fail
+      fail-fast: false
       matrix:
         browser: [chrome, firefox]
 
@@ -36,20 +36,22 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Bước upload screenshot - Chỉ kích hoạt khi step chạy test bị FAIL
+      # Bước upload screenshot - Chỉ upload khi test FAIL và bỏ qua warning nếu không có ảnh
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: error-screenshots-${{ matrix.browser }}
-          path: screenshots/
+          path: screenshots/                   # Đảm bảo folder này trùng với folder lưu ảnh trong wdio.conf.js
+          if-no-files-found: ignore             # 👈 Dòng này sẽ làm sạch warning khi không có ảnh lỗi
           retention-days: 7
 
-      # Upload Allure results — luôn chạy để có report dù pass/fail
+      # Upload Allure results - Bỏ qua warning nếu không tìm thấy kết quả allure
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-${{ matrix.browser }}
           path: allure-results/
+          if-no-files-found: ignore             # 👈 Thêm để tránh warning tương tự cho Allure
           retention-days: 7
