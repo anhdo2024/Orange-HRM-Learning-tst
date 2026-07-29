@@ -64,6 +64,9 @@ export const config = {
             args: process.env.CI
                 ? ['--headless=new', '--no-sandbox', '--disable-gpu', '--window-size=1920,1080']
                 : []
+        },
+        'moz:firefoxOptions': {
+            args: ['-headless']
         }
     }],
 

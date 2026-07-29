@@ -29,7 +29,7 @@ jobs:
         run: npm install
 
       - name: Run WebdriverIO Tests
-        run: npx wdio run wdio.conf.js --capabilities.0.browserName=${{ matrix.browser }}
+        run: npx wdio run wdio.conf.js --browser ${{ matrix.browser }}
         env:
           CI: true
           BASE_URL: ${{ secrets.BASE_URL }}
