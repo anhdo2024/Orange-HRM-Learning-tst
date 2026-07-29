@@ -98,7 +98,9 @@ export const config = {
     // with `/`, the base url gets prepended, not including the path portion of your baseUrl.
     // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
     // gets prepended directly.
-    baseUrl: 'https://opensource-demo.orangehrmlive.com/web/index.php/',
+    //baseUrl: 'https://opensource-demo.orangehrmlive.com/web/index.php/',
+    baseUrl: process.env.BASE_URL || 'https://opensource-demo.orangehrmlive.com',
+
     //
     // Default timeout for all waitFor* commands.
     waitforTimeout: 10000,
@@ -242,7 +244,11 @@ export const config = {
      */
     afterTest: async function (test, context, { error, result, duration, passed, retries }) {
         if (!passed) {
-            await browser.takeScreenshot();
+            //await browser.takeScreenshot();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filePath = `./errorShots/${test.title.replace(/\s+/g, '_')}_${timestamp}.png`;
+            await browser.saveScreenshot(filePath);
+            console.log(`[ERROR SCREENSHOT]: Saved to ${filePath}`);
         }
     },
 

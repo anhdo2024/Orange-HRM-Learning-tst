@@ -1,4 +1,4 @@
-name: WebdriverIO E2E Tests (Chrome Headless)
+name: WebdriverIO E2E Multi-Browser Tests
 
 on:
   push:
@@ -8,8 +8,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-tests:
+  e2e-matrix:
+    name: Test on ${{ matrix.browser }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Đảm bảo trình duyệt còn lại vẫn tiếp tục chạy dù trình duyệt kia bị fail
+      matrix:
+        browser: [chrome, firefox]
 
     steps:
       - name: Checkout repository code
@@ -18,15 +23,24 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22  # Đã nâng lên Node 22 để sửa Warning
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install    # Dùng 'npm install' thay vì 'npm ci' nếu chưa có package-lock.json
+        run: npm install
 
       - name: Run WebdriverIO Tests
-        run: npx wdio run wdio.conf.js
+        run: npx wdio run wdio.conf.js --capabilities.0.browserName=${{ matrix.browser }}
         env:
           CI: true
           BASE_URL: ${{ secrets.BASE_URL }}
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      # Bước upload screenshot - Chỉ kích hoạt khi step chạy test bị FAIL
+      - name: Upload Error Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ matrix.browser }}
+          path: errorShots/
+          retention-days: 7

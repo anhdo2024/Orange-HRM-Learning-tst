@@ -2,8 +2,10 @@ import LoginPage from '../pageobjects/LoginPage.js';
 import DashboardPage from '../pageobjects/DashboardPage.js';
 import ForgotPasswordPage from '../pageobjects/ForgotPasswordPage.js';
 
-const VALID_USER = 'Admin';
-const VALID_PASS = 'admin123';
+//const VALID_USER = 'Admin';
+//const VALID_PASS = 'admin123';
+const VALID_USER = process.env.ADMIN_USERNAME;
+const VALID_PASS = process.env.ADMIN_PASSWORD;
 const INVALID_CREDENTIALS = 'Invalid credentials';
 
 describe('Login Module', () => {
@@ -170,5 +172,12 @@ describe('Login Module', () => {
 
         await expect(LoginPage.errorAlert).toBeDisplayed();
         await expect(LoginPage.errorAlert).toHaveText(INVALID_CREDENTIALS);
+    });
+
+    it('should fail purposefully to test screenshot artifact', async () => {
+        await browser.url(process.env.BASE_URL || 'https://opensource-demo.orangehrmlive.com');
+
+        // Cố tình đối chiếu với tiêu đề sai để làm test bị FAIL
+        await expect(browser).toHaveTitle('Tieu De Nay Chac Chan Sai');
     });
 });
