@@ -246,7 +246,7 @@ export const config = {
         if (!passed) {
             //await browser.takeScreenshot();
             // Lưu vào thư mục screenshots + đính vào Allure
-            await browser.saveScreenshot(`./screenshots/${test.title.replace(/\s+/g, '_')}.png`
+            await browser.saveScreenshot(`./screenshots/${test.title}.png`);
             );
 
         }
