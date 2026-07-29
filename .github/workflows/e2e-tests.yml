@@ -1,4 +1,4 @@
-name: WebdriverIO E2E Multi-Browser Tests
+name: WebdriverIO E2E Tests & Allure Report
 
 on:
   push:
@@ -7,7 +7,18 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+# Cấp quyền cho GitHub Actions có thể deploy lên GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
+  # JOB 1: Chạy E2E Tests trên Matrix
   e2e-matrix:
     name: Test on ${{ matrix.browser }}
     runs-on: ubuntu-latest
@@ -36,22 +47,54 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Bước upload screenshot - Chỉ upload khi test FAIL và bỏ qua warning nếu không có ảnh
-      - name: Upload Error Screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: error-screenshots-${{ matrix.browser }}
-          path: screenshots/                   # Đảm bảo folder này trùng với folder lưu ảnh trong wdio.conf.js
-          if-no-files-found: ignore             # 👈 Dòng này sẽ làm sạch warning khi không có ảnh lỗi
-          retention-days: 7
-
-      # Upload Allure results - Bỏ qua warning nếu không tìm thấy kết quả allure
+      # Lưu lại Allure Raw Results của từng browser
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-${{ matrix.browser }}
           path: allure-results/
-          if-no-files-found: ignore             # 👈 Thêm để tránh warning tương tự cho Allure
-          retention-days: 7
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # JOB 2: Tổng hợp kết quả và Publish Allure Report lên GitHub Pages
+  generate-and-deploy-report:
+    name: Generate & Deploy Allure Report
+    needs: e2e-matrix
+    if: always() # Luôn chạy để tạo report dù test Pass hay Fail
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Allure Results from Matrix
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: combined-allure-results
+          merge-multiple: true
+
+      - name: Get Allure Report history from GitHub Pages
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages-dir
+
+      - name: Build Allure HTML Report
+        uses: simple-elf/allure-report-action@v1.9
+        with:
+          allure_results: combined-allure-results
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: allure-history
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
