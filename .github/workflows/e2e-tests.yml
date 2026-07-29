@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch: # Cho phép bấm nút chạy thủ công trên tab Actions
+  workflow_dispatch:
 
 jobs:
   e2e-tests:
@@ -18,11 +18,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22  # Đã nâng lên Node 22 để sửa Warning
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install    # Dùng 'npm install' thay vì 'npm ci' nếu chưa có package-lock.json
 
       - name: Run WebdriverIO Tests
         run: npx wdio run wdio.conf.js
