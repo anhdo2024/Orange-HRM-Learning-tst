@@ -7,9 +7,8 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-# Cấp quyền cho GitHub Actions có thể deploy lên GitHub Pages
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # JOB 1: Chạy E2E Tests trên Matrix
+  # JOB 1: Chạy E2E Tests trên Matrix Chrome & Firefox
   e2e-matrix:
     name: Test on ${{ matrix.browser }}
     runs-on: ubuntu-latest
@@ -47,7 +46,7 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Lưu lại Allure Raw Results của từng browser
+      # Upload Allure results gốc
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,7 +60,7 @@ jobs:
   generate-and-deploy-report:
     name: Generate & Deploy Allure Report
     needs: e2e-matrix
-    if: always() # Luôn chạy để tạo report dù test Pass hay Fail
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
@@ -75,26 +74,22 @@ jobs:
           path: combined-allure-results
           merge-multiple: true
 
-      - name: Get Allure Report history from GitHub Pages
-        uses: actions/checkout@v4
-        if: always()
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: gh-pages-dir
-
+      # Tạo Allure Report trực tiếp (Không cần checkout nhánh gh-pages thủ công)
       - name: Build Allure HTML Report
         uses: simple-elf/allure-report-action@v1.9
+        if: always()
         with:
           allure_results: combined-allure-results
           allure_history: allure-history
           keep_reports: 20
 
+      # Upload Artifact cho GitHub Pages
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: allure-history
 
+      # Deploy lên GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
