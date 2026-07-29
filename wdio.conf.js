@@ -139,7 +139,7 @@ export const config = {
     // Test reporter for stdout.
     // The only one supported by default is 'dot'
     // see also: https://webdriver.io/docs/dot-reporter
-    reporters: ['spec', ['allure', { outputDir: 'allure-results' }]],
+    reporters: ['spec', ['allure', { outputDir: 'allure-results', disableWebdriverStepsReporting: false, disableWebdriverScreenshotsReporting: false }]],
 
     // Options to be passed to Mocha.
     // See the full list at http://mochajs.org/
@@ -245,10 +245,10 @@ export const config = {
     afterTest: async function (test, context, { error, result, duration, passed, retries }) {
         if (!passed) {
             //await browser.takeScreenshot();
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filePath = `./errorShots/${test.title.replace(/\s+/g, '_')}_${timestamp}.png`;
-            await browser.saveScreenshot(filePath);
-            console.log(`[ERROR SCREENSHOT]: Saved to ${filePath}`);
+            // Lưu vào thư mục screenshots + đính vào Allure
+            await browser.saveScreenshot(`./screenshots/${test.title.replace(/\s+/g, '_')}.png`
+            );
+
         }
     },
 
