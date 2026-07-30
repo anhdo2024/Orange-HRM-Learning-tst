@@ -1,4 +1,7 @@
 // import path from 'path';
+import allureReporter from '@wdio/allure-reporter';
+import fs from 'fs';
+import path from 'path';
 
 export const config = {
     //
@@ -248,9 +251,24 @@ export const config = {
     //  afterTest: async function (test, context, { error, result, duration, passed, retries }) {
     afterTest: async function (test, context, { passed }) {
         if (!passed) {
-            //await browser.takeScreenshot();
-            // Lưu vào thư mục screenshots + đính vào Allure
-            await browser.saveScreenshot(`./screenshots/${test.title.replace(/\s+/g, '_')}.png`);
+            const dir = path.resolve('./screenshots');
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+
+            const cleanTitle = test.title.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const filePath = path.join(dir, `${cleanTitle}.png`);
+
+            // Chụp và lưu file
+            const screenshot = await browser.takeScreenshot();
+            fs.writeFileSync(filePath, screenshot, 'base64');
+
+            // Đính kèm ảnh vào Allure Report
+            allureReporter.addAttachment(
+                `Screenshot - ${cleanTitle}`,
+                Buffer.from(screenshot, 'base64'),
+                'image/png'
+            );
         }
     },
 
