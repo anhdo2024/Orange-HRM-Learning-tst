@@ -1,0 +1,60 @@
+name: Nightly E2E Multi-Browser Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
+
+jobs:
+  e2e-matrix:
+    name: Test on ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run WebdriverIO Tests
+        run: npx wdio run wdio.conf.js --browser ${{ matrix.browser }}
+        env:
+          CI: true
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      # Upload Screenshots khi test FAIL - Bỏ qua cảnh báo nếu không có ảnh
+      - name: Upload Error Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ matrix.browser }}
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Upload Allure results - Bỏ qua cảnh báo nếu không có kết quả
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.browser }}
+          path: allure-results/
+          if-no-files-found: ignore
+          retention-days: 7
