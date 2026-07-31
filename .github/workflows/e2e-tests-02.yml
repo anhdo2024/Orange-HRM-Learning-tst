@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
   schedule:
     # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
-    - cron: '0 16 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
 
 jobs:
