@@ -3,6 +3,7 @@ import allureReporter from '@wdio/allure-reporter';
 import fs from 'fs';
 import path from 'path';
 
+
 export const config = {
     //
     // ====================
@@ -105,7 +106,7 @@ export const config = {
     // If your `url` parameter starts without a scheme or `/` (like `some/path`), the base url
     // gets prepended directly.
     //baseUrl: 'https://opensource-demo.orangehrmlive.com/web/index.php/',
-    baseUrl: process.env.BASE_URL || 'https://opensource-demo.orangehrmlive.com',
+    baseUrl: process.env.BASE_URL || 'https://example.com',
 
     //
     // Default timeout for all waitFor* commands.

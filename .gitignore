@@ -4,10 +4,12 @@
 .tmp
 .idea
 .claude
+.env
 
 tmp
 node_modules
 allure-report
 allure-results
+screenshots
 
 wdio-appium.log

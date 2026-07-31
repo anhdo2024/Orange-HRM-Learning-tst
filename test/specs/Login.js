@@ -174,7 +174,7 @@ describe('Login Module', () => {
         await expect(LoginPage.errorAlert).toHaveText(INVALID_CREDENTIALS);
     });
 
-    it('should fail purposefully to test screenshot artifact', async () => {
+    it('Should fail purposefully to test screenshot artifact', async () => {
         await browser.url(process.env.BASE_URL || 'https://opensource-demo.orangehrmlive.com');
 
         // Cố tình đối chiếu với tiêu đề sai để làm test bị FAIL
