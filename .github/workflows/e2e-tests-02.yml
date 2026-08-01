@@ -1,14 +1,13 @@
-name: Nightly E2E Multi-Browser Tests
+name: Nightly E2E Send Notification Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master,luke-tst ]
   pull_request:
     branches: [ main, master ]
   schedule:
-    # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
-    - cron: '0 2 * * *'
-  workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
+    - cron: '17 2 * * *' # Tránh phút 00 để giảm delay cron
+  workflow_dispatch:
 
 jobs:
   e2e-matrix:
@@ -39,7 +38,6 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Upload Screenshots khi test FAIL - Bỏ qua cảnh báo nếu không có ảnh
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -49,7 +47,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Upload Allure results - Bỏ qua cảnh báo nếu không có kết quả
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,12 +57,20 @@ jobs:
           retention-days: 7
 
   notify-team-channel:
-    name: Send Slack notification
+    name: Send Detailed Slack Notification
     if: always()
     needs: e2e-matrix
     runs-on: ubuntu-latest
     steps:
-      - name: Send Slack notification
+      - name: Download All Allure Results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: combined-allure-results
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Parse Allure Results & Send Slack Message
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
@@ -74,7 +79,85 @@ jobs:
             exit 0
           fi
 
+          # 1. Đếm số lượng Test Cases từ các file *-result.json
+          PASSED=0
+          FAILED=0
+          BROKEN=0
+          SKIPPED=0
+          TOTAL=0
+
+          if [ -d "combined-allure-results" ]; then
+            for file in combined-allure-results/*-result.json; do
+              if [ -f "$file" ]; then
+                STATUS=$(node -e "try { console.log(require('./$file').status); } catch(e) { console.log(''); }")
+                case "$STATUS" in
+                  "passed") PASSED=$((PASSED + 1)) ;;
+                  "failed") FAILED=$((FAILED + 1)) ;;
+                  "broken") BROKEN=$((BROKEN + 1)) ;;
+                  "skipped") SKIPPED=$((SKIPPED + 1)) ;;
+                esac
+              fi
+            done
+          fi
+
+          TOTAL=$((PASSED + FAILED + BROKEN + SKIPPED))
+
+          # 2. Định dạng màu sắc và icon tiêu đề
+          OVERALL_STATUS="${{ needs.e2e-matrix.result }}"
+          if [ "$OVERALL_STATUS" = "success" ]; then
+            COLOR="#36a64f" # Xanh lá
+            ICON="🟢"
+            TITLE="E2E Test Suite Passed"
+          else
+            COLOR="#e01e5a" # Đỏ
+            ICON="🔴"
+            TITLE="E2E Test Suite Failed"
+          fi
+
+          # 3. Gửi payload đẹp mắt dạng Slack Block Kit
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
-            --data '{"text":"E2E tests completed with status: ${{ needs.e2e-matrix.result }}\nRepository: ${{ github.repository }}\nBranch or ref: ${{ github.ref_name }}\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            --data "{
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"blocks\": [
+                    {
+                      \"type\": \"header\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"$ICON $TITLE\",
+                        \"emoji\": true
+                      }
+                    },
+                    {
+                      \"type\": \"section\",
+                      \"fields\": [
+                        { \"type\": \"mrkdwn\", \"text\": \"*Repository:*\n\`${{ github.repository }}\`\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\" }
+                      ]
+                    },
+                    {
+                      \"type\": \"section\",
+                      \"fields\": [
+                        { \"type\": \"mrkdwn\", \"text\": \"*Total Tests:* $TOTAL\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*✅ Passed:* $PASSED\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*❌ Failed:* $FAILED\" },
+                        { \"type\": \"mrkdwn\", \"text\": \"*⚠️ Broken/Skipped:* $((BROKEN + SKIPPED))\" }
+                      ]
+                    },
+                    {
+                      \"type\": \"actions\",
+                      \"elements\": [
+                        {
+                          \"type\": \"button\",
+                          \"text\": { \"type\": \"plain_text\", \"text\": \"View Workflow Run 🔍\" },
+                          \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }" \
             "$SLACK_WEBHOOK_URL"
