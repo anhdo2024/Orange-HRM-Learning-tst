@@ -83,9 +83,9 @@ jobs:
       # Parse Allure JSON & Gửi Notification tới Slack
       - name: Parse Allure Results and Send Slack Notification
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL02 }}
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL02" ]; then
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
             echo "SLACK_WEBHOOK_URL is not configured; skipping notification."
             exit 0
           fi
