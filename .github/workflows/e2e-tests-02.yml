@@ -1,8 +1,8 @@
-name: Nightly E2E Multi-Browser Tests
+name: Nightly E2E Notification Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, luke-tst]
   pull_request:
     branches: [ main, master ]
   schedule:
