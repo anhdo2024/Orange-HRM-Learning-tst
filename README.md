@@ -1,5 +1,8 @@
 # Orange HRM — E2E Test Automation
 
+[![OrangeHRM E2E Tests](https://github.com/anhdo2024/Orange-HRM-Learning-tst/actions/workflows/e2e-tests.yml/badge.svg?branch=main)](https://github.com/anhdo2024/Orange-HRM-Learning-tst/actions/workflows/e2e-tests.yml)
+[![GitHub Pages](https://img.shields.io/badge/Allure%20Report-GitHub%20Pages-blue?logo=github)](https://anhdo2024.github.io/Orange-HRM-Learning-tst/)
+
 End-to-End automated tests for the **OrangeHRM** demo application, built with **WebdriverIO v9** following the **Page Object Model (POM)** pattern.
 
 - **Application under test:** https://opensource-demo.orangehrmlive.com
