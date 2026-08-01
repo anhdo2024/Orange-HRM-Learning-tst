@@ -58,3 +58,23 @@ jobs:
           path: allure-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  notify-team-channel:
+    name: Send Slack notification
+    if: always()
+    needs: e2e-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL is not configured; skipping notification."
+            exit 0
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data '{"text":"E2E tests completed with status: ${{ needs.e2e-matrix.result }}\nRepository: ${{ github.repository }}\nBranch or ref: ${{ github.ref_name }}\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            "$SLACK_WEBHOOK_URL"

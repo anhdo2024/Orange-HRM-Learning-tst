@@ -1,11 +1,14 @@
-name: WebdriverIO E2E Multi-Browser Tests
+name: Nightly E2E Multi-Browser Tests
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
+  schedule:
+    # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
 
 jobs:
   e2e-matrix:
@@ -36,22 +39,22 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Bước upload screenshot - Chỉ upload khi test FAIL và bỏ qua warning nếu không có ảnh
+      # Upload Screenshots khi test FAIL - Bỏ qua cảnh báo nếu không có ảnh
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: error-screenshots-${{ matrix.browser }}
-          path: screenshots/                   # Đảm bảo folder này trùng với folder lưu ảnh trong wdio.conf.js
-          if-no-files-found: ignore             # 👈 Dòng này sẽ làm sạch warning khi không có ảnh lỗi
+          path: screenshots/
+          if-no-files-found: ignore
           retention-days: 7
 
-      # Upload Allure results - Bỏ qua warning nếu không tìm thấy kết quả allure
+      # Upload Allure results - Bỏ qua cảnh báo nếu không có kết quả
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-${{ matrix.browser }}
           path: allure-results/
-          if-no-files-found: ignore             # 👈 Thêm để tránh warning tương tự cho Allure
+          if-no-files-found: ignore
           retention-days: 7
