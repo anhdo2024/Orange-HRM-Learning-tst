@@ -89,8 +89,8 @@ jobs:
             exit 0
           fi
 
-          # Tạo script Node.js ngắn để parse các file *-result.json từ Allure Artifacts
-          cat << 'EOF' > parse_allure.js
+          # Tạo file script với đuôi .cjs thay vì .js
+          cat << 'EOF' > parse_allure.cjs
           const fs = require('fs');
           const path = require('path');
 
@@ -129,7 +129,6 @@ jobs:
 
           let failedCasesText = '';
           if (failedCases.length > 0) {
-            // Lấy tối đa 5 test cases bị lỗi để không làm tràn tin nhắn Slack
             const displayFailed = failedCases.slice(0, 5).map(c => `• \`${c}\``).join('\n');
             const remaining = failedCases.length > 5 ? `\n_...and ${failedCases.length - 5} more_` : '';
             failedCasesText = `\n*Failed Test Cases:*\n${displayFailed}${remaining}`;
@@ -190,8 +189,8 @@ jobs:
           fs.writeFileSync('slack_payload.json', JSON.stringify(payload));
           EOF
 
-          # Chạy script parse dữ liệu Allure
-          OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.js
+          # Thực thi file parse_allure.cjs
+          OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.cjs
 
           # Gửi Webhook sang Slack
           curl --fail-with-body --silent --show-error \
