@@ -214,4 +214,4 @@ jobs:
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
             -d @slack_payload.json \
-            "$SLACK_WEBHOOK_URL"
+            "$SLACK_WEBHOOK_URL02"
