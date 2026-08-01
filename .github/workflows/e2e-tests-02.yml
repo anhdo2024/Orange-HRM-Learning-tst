@@ -86,7 +86,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL02 }}
         run: |
           if [ -z "$SLACK_WEBHOOK_URL02" ]; then
-            echo "SLACK_WEBHOOK_URL is not configured; skipping notification."
+            echo "SLACK_WEBHOOK_URL02 is not configured; skipping notification."
             exit 0
           fi
 
