@@ -80,6 +80,7 @@ jobs:
         continue-on-error: true
 
       # 2. Parse Allure JSON & Gửi Notification tới Slack
+      # Parse Allure JSON & Gửi Notification tới Slack
       - name: Parse Allure Results and Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -89,13 +90,12 @@ jobs:
             exit 0
           fi
 
-          # Tạo file script với đuôi .cjs thay vì .js
           cat << 'EOF' > parse_allure.cjs
           const fs = require('fs');
           const path = require('path');
 
           const dir = './combined-allure-results';
-          let total = 0, passed = 0, failed = 0, broken = 0, skipped = 0;
+          let total = 0, passed = 0, failed = 0, broken = 0, skipped = 0, retried = 0;
           let failedCases = [];
 
           if (fs.existsSync(dir)) {
@@ -106,14 +106,23 @@ jobs:
                   const content = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
                   total++;
                   const status = content.status;
-                  if (status === 'passed') passed++;
-                  else if (status === 'failed') {
+
+                  // Đếm Retried tests
+                  if (content.retries && content.retries.length > 0) {
+                    retried += content.retries.length;
+                  }
+
+                  if (status === 'passed') {
+                    passed++;
+                  } else if (status === 'failed') {
                     failed++;
                     failedCases.push(content.name || content.fullName || 'Unknown Test');
                   } else if (status === 'broken') {
                     broken++;
                     failedCases.push(content.name || content.fullName || 'Unknown Test (Broken)');
-                  } else if (status === 'skipped') skipped++;
+                  } else if (status === 'skipped') {
+                    skipped++;
+                  }
                 } catch (e) {
                   console.error('Error parsing file:', file, e);
                 }
@@ -121,17 +130,20 @@ jobs:
             });
           }
 
+          // Tính toán Pass Rate (%) theo công thức của Allure Report
+          const passRate = total > 0 ? ((passed / total) * 100).toFixed(2) : '0.00';
+
           const overallStatus = process.env.OVERALL_STATUS;
           const isSuccess = overallStatus === 'success' && failed === 0 && broken === 0;
-          const color = isSuccess ? '#2eb886' : '#a30200';
+          const color = isSuccess ? '#2eb886' : '#e01e5a';
           const icon = isSuccess ? '🟢' : '🔴';
-          const title = isSuccess ? 'All E2E Tests Passed Successfully!' : 'E2E Tests Execution Completed with Failures';
+          const title = isSuccess ? 'Allure Report - All Tests Passed' : 'Allure Report - E2E Test Execution Failed';
 
           let failedCasesText = '';
           if (failedCases.length > 0) {
             const displayFailed = failedCases.slice(0, 5).map(c => `• \`${c}\``).join('\n');
             const remaining = failedCases.length > 5 ? `\n_...and ${failedCases.length - 5} more_` : '';
-            failedCasesText = `\n*Failed Test Cases:*\n${displayFailed}${remaining}`;
+            failedCasesText = `\n*❌ Failed Test Cases:*\n${displayFailed}${remaining}`;
           }
 
           const payload = {
@@ -151,16 +163,22 @@ jobs:
                     type: 'section',
                     fields: [
                       { type: 'mrkdwn', text: `*Repository:*\n\`${process.env.GITHUB_REPOSITORY}\`` },
-                      { type: 'mrkdwn', text: `*Branch:*\n\`${process.env.GITHUB_REF_NAME}\`` }
+                      { type: 'mrkdwn', text: `*Branch / Ref:*\n\`${process.env.GITHUB_REF_NAME}\`` }
                     ]
                   },
                   {
                     type: 'section',
                     fields: [
-                      { type: 'mrkdwn', text: `*Total Executed:* ${total}` },
-                      { type: 'mrkdwn', text: `*Passed:* ✅ ${passed}` },
-                      { type: 'mrkdwn', text: `*Failed:* ❌ ${failed}` },
-                      { type: 'mrkdwn', text: `*Broken/Skipped:* ⚠️ ${broken + skipped}` }
+                      { type: 'mrkdwn', text: `*📊 Pass Rate:*\n\`${passRate}%\`` },
+                      { type: 'mrkdwn', text: `*🧪 Total Tests:*\n\`${total}\` _(Retried: ${retried})_` }
+                    ]
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*✅ Passed:* \`${passed}\`` },
+                      { type: 'mrkdwn', text: `*🔴 Failed:* \`${failed + broken}\`` },
+                      { type: 'mrkdwn', text: `*⚪ Skipped:* \`${skipped}\`` }
                     ]
                   }
                 ]
@@ -180,7 +198,7 @@ jobs:
             elements: [
               {
                 type: 'button',
-                text: { type: 'plain_text', text: 'View Allure Artifacts & Logs 🔍' },
+                text: { type: 'plain_text', text: 'View Allure Report / Artifacts 🔍' },
                 url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
               }
             ]
@@ -189,10 +207,10 @@ jobs:
           fs.writeFileSync('slack_payload.json', JSON.stringify(payload));
           EOF
 
-          # Thực thi file parse_allure.cjs
+          # Thực thi script parse_allure.cjs
           OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.cjs
 
-          # Gửi Webhook sang Slack
+          # Gửi tin nhắn tới Slack
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
             -d @slack_payload.json \
