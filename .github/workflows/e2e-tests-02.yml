@@ -1,12 +1,12 @@
-name: Nightly E2E Send Notification Tests
+name: Nightly E2E Multi-Browser Tests
 
 on:
   push:
-    branches: [ main, master,luke-tst ]
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
   schedule:
-    - cron: '17 2 * * *' # Tránh phút 00 để giảm delay cron
+    - cron: '17 2 * * *'
   workflow_dispatch:
 
 jobs:
@@ -57,12 +57,21 @@ jobs:
           retention-days: 7
 
   notify-team-channel:
-    name: Send Detailed Slack Notification
+    name: Send Allure Report Slack Notification
     if: always()
     needs: e2e-matrix
     runs-on: ubuntu-latest
     steps:
-      - name: Download All Allure Results
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 1. Download tất cả Allure Results từ Artifacts của job e2e-matrix
+      - name: Download Allure Results Artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: allure-results-*
@@ -70,7 +79,8 @@ jobs:
           merge-multiple: true
         continue-on-error: true
 
-      - name: Parse Allure Results & Send Slack Message
+      # 2. Parse Allure JSON & Gửi Notification tới Slack
+      - name: Parse Allure Results and Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
@@ -79,85 +89,112 @@ jobs:
             exit 0
           fi
 
-          # 1. Đếm số lượng Test Cases từ các file *-result.json
-          PASSED=0
-          FAILED=0
-          BROKEN=0
-          SKIPPED=0
-          TOTAL=0
+          # Tạo script Node.js ngắn để parse các file *-result.json từ Allure Artifacts
+          cat << 'EOF' > parse_allure.js
+          const fs = require('fs');
+          const path = require('path');
 
-          if [ -d "combined-allure-results" ]; then
-            for file in combined-allure-results/*-result.json; do
-              if [ -f "$file" ]; then
-                STATUS=$(node -e "try { console.log(require('./$file').status); } catch(e) { console.log(''); }")
-                case "$STATUS" in
-                  "passed") PASSED=$((PASSED + 1)) ;;
-                  "failed") FAILED=$((FAILED + 1)) ;;
-                  "broken") BROKEN=$((BROKEN + 1)) ;;
-                  "skipped") SKIPPED=$((SKIPPED + 1)) ;;
-                esac
-              fi
-            done
-          fi
+          const dir = './combined-allure-results';
+          let total = 0, passed = 0, failed = 0, broken = 0, skipped = 0;
+          let failedCases = [];
 
-          TOTAL=$((PASSED + FAILED + BROKEN + SKIPPED))
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            files.forEach(file => {
+              if (file.endsWith('-result.json')) {
+                try {
+                  const content = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+                  total++;
+                  const status = content.status;
+                  if (status === 'passed') passed++;
+                  else if (status === 'failed') {
+                    failed++;
+                    failedCases.push(content.name || content.fullName || 'Unknown Test');
+                  } else if (status === 'broken') {
+                    broken++;
+                    failedCases.push(content.name || content.fullName || 'Unknown Test (Broken)');
+                  } else if (status === 'skipped') skipped++;
+                } catch (e) {
+                  console.error('Error parsing file:', file, e);
+                }
+              }
+            });
+          }
 
-          # 2. Định dạng màu sắc và icon tiêu đề
-          OVERALL_STATUS="${{ needs.e2e-matrix.result }}"
-          if [ "$OVERALL_STATUS" = "success" ]; then
-            COLOR="#36a64f" # Xanh lá
-            ICON="🟢"
-            TITLE="E2E Test Suite Passed"
-          else
-            COLOR="#e01e5a" # Đỏ
-            ICON="🔴"
-            TITLE="E2E Test Suite Failed"
-          fi
+          const overallStatus = process.env.OVERALL_STATUS;
+          const isSuccess = overallStatus === 'success' && failed === 0 && broken === 0;
+          const color = isSuccess ? '#2eb886' : '#a30200';
+          const icon = isSuccess ? '🟢' : '🔴';
+          const title = isSuccess ? 'All E2E Tests Passed Successfully!' : 'E2E Tests Execution Completed with Failures';
 
-          # 3. Gửi payload đẹp mắt dạng Slack Block Kit
+          let failedCasesText = '';
+          if (failedCases.length > 0) {
+            // Lấy tối đa 5 test cases bị lỗi để không làm tràn tin nhắn Slack
+            const displayFailed = failedCases.slice(0, 5).map(c => `• \`${c}\``).join('\n');
+            const remaining = failedCases.length > 5 ? `\n_...and ${failedCases.length - 5} more_` : '';
+            failedCasesText = `\n*Failed Test Cases:*\n${displayFailed}${remaining}`;
+          }
+
+          const payload = {
+            attachments: [
+              {
+                color: color,
+                blocks: [
+                  {
+                    type: 'header',
+                    text: {
+                      type: 'plain_text',
+                      text: `${icon} ${title}`,
+                      emoji: true
+                    }
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*Repository:*\n\`${process.env.GITHUB_REPOSITORY}\`` },
+                      { type: 'mrkdwn', text: `*Branch:*\n\`${process.env.GITHUB_REF_NAME}\`` }
+                    ]
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*Total Executed:* ${total}` },
+                      { type: 'mrkdwn', text: `*Passed:* ✅ ${passed}` },
+                      { type: 'mrkdwn', text: `*Failed:* ❌ ${failed}` },
+                      { type: 'mrkdwn', text: `*Broken/Skipped:* ⚠️ ${broken + skipped}` }
+                    ]
+                  }
+                ]
+              }
+            ]
+          };
+
+          if (failedCasesText) {
+            payload.attachments[0].blocks.push({
+              type: 'section',
+              text: { type: 'mrkdwn', text: failedCasesText }
+            });
+          }
+
+          payload.attachments[0].blocks.push({
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'View Allure Artifacts & Logs 🔍' },
+                url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+              }
+            ]
+          });
+
+          fs.writeFileSync('slack_payload.json', JSON.stringify(payload));
+          EOF
+
+          # Chạy script parse dữ liệu Allure
+          OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.js
+
+          # Gửi Webhook sang Slack
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
-            --data "{
-              \"attachments\": [
-                {
-                  \"color\": \"$COLOR\",
-                  \"blocks\": [
-                    {
-                      \"type\": \"header\",
-                      \"text\": {
-                        \"type\": \"plain_text\",
-                        \"text\": \"$ICON $TITLE\",
-                        \"emoji\": true
-                      }
-                    },
-                    {
-                      \"type\": \"section\",
-                      \"fields\": [
-                        { \"type\": \"mrkdwn\", \"text\": \"*Repository:*\n\`${{ github.repository }}\`\" },
-                        { \"type\": \"mrkdwn\", \"text\": \"*Branch:*\n\`${{ github.ref_name }}\`\" }
-                      ]
-                    },
-                    {
-                      \"type\": \"section\",
-                      \"fields\": [
-                        { \"type\": \"mrkdwn\", \"text\": \"*Total Tests:* $TOTAL\" },
-                        { \"type\": \"mrkdwn\", \"text\": \"*✅ Passed:* $PASSED\" },
-                        { \"type\": \"mrkdwn\", \"text\": \"*❌ Failed:* $FAILED\" },
-                        { \"type\": \"mrkdwn\", \"text\": \"*⚠️ Broken/Skipped:* $((BROKEN + SKIPPED))\" }
-                      ]
-                    },
-                    {
-                      \"type\": \"actions\",
-                      \"elements\": [
-                        {
-                          \"type\": \"button\",
-                          \"text\": { \"type\": \"plain_text\", \"text\": \"View Workflow Run 🔍\" },
-                          \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }" \
+            -d @slack_payload.json \
             "$SLACK_WEBHOOK_URL"
