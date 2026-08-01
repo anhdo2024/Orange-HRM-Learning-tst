@@ -85,8 +85,8 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL02 }}
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL02" ]; then
-            echo "SLACK_WEBHOOK_URL02 is not configured; skipping notification."
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL is not configured; skipping notification."
             exit 0
           fi
 
@@ -214,4 +214,4 @@ jobs:
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
             -d @slack_payload.json \
-            "$SLACK_WEBHOOK_URL02"
+            "$SLACK_WEBHOOK_URL"
