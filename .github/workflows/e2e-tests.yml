@@ -2,7 +2,7 @@ name: WebdriverIO E2E Multi-Browser Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, luke-tst]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
