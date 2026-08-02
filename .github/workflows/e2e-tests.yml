@@ -1,4 +1,4 @@
-name: WebdriverIO E2E Multi-Browser Tests
+name: WebdriverIO E2E Multi-Browser Tests - GROUP TST
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  e2e-matrix:
+  e2e-matrix-group-tst:
     name: Test on ${{ matrix.browser }}
     runs-on: ubuntu-latest
     strategy:
