@@ -78,7 +78,7 @@ jobs:
         uses: actions/checkout@v4
         continue-on-error: true # in case run without branch for GitHub page source
         with:
-          ref: diem/allure-report 
+          ref: allure
           path: allure-reports
 
       - uses: simple-elf/allure-report-action@master
