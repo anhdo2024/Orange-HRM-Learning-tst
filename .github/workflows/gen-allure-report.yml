@@ -81,7 +81,7 @@ jobs:
           ref: diem/allure-report 
           path: allure-reports
 
-      - uses: simple-elf/allure-report-action@v1.7
+      - uses: simple-elf/allure-report-action@master
         id: generate-allure-report
         with:
           allure_results: allure-results
