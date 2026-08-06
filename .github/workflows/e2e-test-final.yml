@@ -27,25 +27,32 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ github.event.inputs.browser }}" = "chrome" ]; then
+          EVENT_NAME="${{ github.event_name }}"
+          SELECTED_BROWSER="${{ inputs.browser }}"
+
+          echo "Event Name: $EVENT_NAME"
+          echo "Selected Browser Input: $SELECTED_BROWSER"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$SELECTED_BROWSER" = "chrome" ]; then
               echo 'browsers=["chrome"]' >> $GITHUB_OUTPUT
-            elif [ "${{ github.event.inputs.browser }}" = "firefox" ]; then
+            elif [ "$SELECTED_BROWSER" = "firefox" ]; then
               echo 'browsers=["firefox"]' >> $GITHUB_OUTPUT
             else
               echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
             fi
           else
+            # Mặc định khi chạy tự động (push / pull_request / schedule)
             echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
           fi
 
-  # JOB 2: Chạy E2E Tests trên Matrix Chrome & Firefox
+  # JOB 2: Chạy E2E Tests dựa trên Matrix linh hoạt
   e2e-matrix:
     name: Test on ${{ matrix.browser }}
     needs: setup-matrix
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Đảm bảo cả Chrome & Firefox đều chạy xong dù 1 trong 2 bị fail
+      fail-fast: false
       matrix:
         browser: ${{ fromJson(needs.setup-matrix.outputs.browsers) }}
 
@@ -105,7 +112,7 @@ jobs:
         with:
           node-version: 22
 
-      # Download tất cả Allure Results từ cả Chrome & Firefox
+      # Download tất cả Allure Results từ các browser đã chạy
       - name: Download Allure Results Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -124,7 +131,6 @@ jobs:
             exit 0
           fi
 
-          # Dùng đuôi .cjs để tránh lỗi ES Module / CommonJS
           cat << 'EOF' > parse_allure.cjs
           const fs = require('fs');
           const path = require('path');
@@ -240,10 +246,8 @@ jobs:
           fs.writeFileSync('slack_payload.json', JSON.stringify(payload));
           EOF
 
-          # Thực thi script parse_allure.cjs
           OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.cjs
 
-          # Gửi tin nhắn sang Slack Webhook
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
             -d @slack_payload.json \
