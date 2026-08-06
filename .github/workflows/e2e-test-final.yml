@@ -1,0 +1,250 @@
+name: OrangeHRM POM E2E Multi-Browser Tests
+
+on:
+  push:
+    branches: [ main, master, luke-tst ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Chọn trình duyệt cần chạy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'chrome'
+          - 'firefox'
+
+jobs:
+  # JOB 1: Xác định danh sách trình duyệt cần test dựa trên trigger
+  setup-matrix:
+    name: Setup Browser Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      browsers: ${{ steps.set-matrix.outputs.browsers }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.browser }}" = "chrome" ]; then
+              echo 'browsers=["chrome"]' >> $GITHUB_OUTPUT
+            elif [ "${{ github.event.inputs.browser }}" = "firefox" ]; then
+              echo 'browsers=["firefox"]' >> $GITHUB_OUTPUT
+            else
+              echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
+            fi
+          else
+            echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
+          fi
+
+  # JOB 2: Chạy E2E Tests trên Matrix Chrome & Firefox
+  e2e-matrix:
+    name: Test on ${{ matrix.browser }}
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Đảm bảo cả Chrome & Firefox đều chạy xong dù 1 trong 2 bị fail
+      matrix:
+        browser: ${{ fromJson(needs.setup-matrix.outputs.browsers) }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run WebdriverIO Tests
+        run: npx wdio run wdio.conf.js --browser ${{ matrix.browser }}
+        env:
+          CI: true
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      # Upload Screenshots khi có Test Case Fail
+      - name: Upload Error Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ matrix.browser }}
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # Upload Allure Raw Results của từng browser
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.browser }}
+          path: allure-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # JOB 3: Tổng hợp kết quả từ Allure Artifacts & Gửi Notification tới Slack
+  notify-team-channel:
+    name: Send Allure Report Slack Notification
+    if: always()
+    needs: e2e-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Download tất cả Allure Results từ cả Chrome & Firefox
+      - name: Download Allure Results Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: combined-allure-results
+          merge-multiple: true
+        continue-on-error: true
+
+      # Parse Allure JSON & Gửi Notification tới Slack
+      - name: Parse Allure Results and Send Slack Notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL02 }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL is not configured; skipping notification."
+            exit 0
+          fi
+
+          # Dùng đuôi .cjs để tránh lỗi ES Module / CommonJS
+          cat << 'EOF' > parse_allure.cjs
+          const fs = require('fs');
+          const path = require('path');
+
+          const dir = './combined-allure-results';
+          let total = 0, passed = 0, failed = 0, broken = 0, skipped = 0, retried = 0;
+          let failedCases = [];
+
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            files.forEach(file => {
+              if (file.endsWith('-result.json')) {
+                try {
+                  const content = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+                  total++;
+                  const status = content.status;
+
+                  if (content.retries && content.retries.length > 0) {
+                    retried += content.retries.length;
+                  }
+
+                  if (status === 'passed') {
+                    passed++;
+                  } else if (status === 'failed') {
+                    failed++;
+                    failedCases.push(content.name || content.fullName || 'Unknown Test');
+                  } else if (status === 'broken') {
+                    broken++;
+                    failedCases.push(content.name || content.fullName || 'Unknown Test (Broken)');
+                  } else if (status === 'skipped') {
+                    skipped++;
+                  }
+                } catch (e) {
+                  console.error('Error parsing file:', file, e);
+                }
+              }
+            });
+          }
+
+          const passRate = total > 0 ? ((passed / total) * 100).toFixed(2) : '0.00';
+
+          const overallStatus = process.env.OVERALL_STATUS;
+          const isSuccess = overallStatus === 'success' && failed === 0 && broken === 0;
+          const color = isSuccess ? '#2eb886' : '#e01e5a';
+          const icon = isSuccess ? '🟢' : '🔴';
+          const title = isSuccess ? 'Allure Report - All Tests Passed' : 'Allure Report - E2E Test Execution Failed';
+
+          let failedCasesText = '';
+          if (failedCases.length > 0) {
+            const displayFailed = failedCases.slice(0, 5).map(c => `• \`${c}\``).join('\n');
+            const remaining = failedCases.length > 5 ? `\n_...and ${failedCases.length - 5} more_` : '';
+            failedCasesText = `\n*❌ Failed Test Cases:*\n${displayFailed}${remaining}`;
+          }
+
+          const payload = {
+            attachments: [
+              {
+                color: color,
+                blocks: [
+                  {
+                    type: 'header',
+                    text: {
+                      type: 'plain_text',
+                      text: `${icon} ${title}`,
+                      emoji: true
+                    }
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*Repository:*\n\`${process.env.GITHUB_REPOSITORY}\`` },
+                      { type: 'mrkdwn', text: `*Branch / Ref:*\n\`${process.env.GITHUB_REF_NAME}\`` }
+                    ]
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*📊 Pass Rate:*\n\`${passRate}%\`` },
+                      { type: 'mrkdwn', text: `*🧪 Total Tests:*\n\`${total}\` _(Retried: ${retried})_` }
+                    ]
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      { type: 'mrkdwn', text: `*✅ Passed:* \`${passed}\`` },
+                      { type: 'mrkdwn', text: `*🔴 Failed:* \`${failed + broken}\`` },
+                      { type: 'mrkdwn', text: `*⚪ Skipped:* \`${skipped}\`` }
+                    ]
+                  }
+                ]
+              }
+            ]
+          };
+
+          if (failedCasesText) {
+            payload.attachments[0].blocks.push({
+              type: 'section',
+              text: { type: 'mrkdwn', text: failedCasesText }
+            });
+          }
+
+          payload.attachments[0].blocks.push({
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'View Allure Report / Artifacts 🔍' },
+                url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+              }
+            ]
+          });
+
+          fs.writeFileSync('slack_payload.json', JSON.stringify(payload));
+          EOF
+
+          # Thực thi script parse_allure.cjs
+          OVERALL_STATUS="${{ needs.e2e-matrix.result }}" GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" GITHUB_SERVER_URL="${{ github.server_url }}" GITHUB_RUN_ID="${{ github.run_id }}" node parse_allure.cjs
+
+          # Gửi tin nhắn sang Slack Webhook
+          curl --fail-with-body --silent --show-error \
+            -H 'Content-Type: application/json' \
+            -d @slack_payload.json \
+            "$SLACK_WEBHOOK_URL"
