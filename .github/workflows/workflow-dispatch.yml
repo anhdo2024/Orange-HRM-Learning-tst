@@ -2,7 +2,7 @@ name: Workflow Dispatch Tests
 
 on:
   push:
-    branches: [ main, master, luke-tst ]
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -26,11 +26,10 @@ jobs:
       browsers: ${{ steps.set-matrix.outputs.browsers }}
     steps:
       - id: set-matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SELECTED_BROWSER: ${{ github.event.inputs.browser || inputs.browser }}
         run: |
-          EVENT_NAME="${{ github.event_name }}"
-          # Dùng github.event.inputs.browser để lấy chính xác giá trị từ UI
-          SELECTED_BROWSER="${{ github.event.inputs.browser }}"
-
           echo "Trigger Event: $EVENT_NAME"
           echo "Selected Browser: $SELECTED_BROWSER"
 
@@ -43,7 +42,7 @@ jobs:
               echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
             fi
           else
-            # Khi tự động chạy (push/pull_request), chạy cả 2 trình duyệt
+            # Khi tự động chạy (push/pull_request), mặc định chạy cả 2 trình duyệt
             echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
           fi
 
