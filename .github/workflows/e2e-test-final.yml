@@ -18,7 +18,7 @@ on:
           - 'firefox'
 
 jobs:
-  # JOB 1: Xác định danh sách trình duyệt cần test dựa trên trigger
+  # JOB 1: Xác định danh sách trình duyệt dựa trên trigger & input chọn lựa
   setup-matrix:
     name: Setup Browser Matrix
     runs-on: ubuntu-latest
@@ -28,10 +28,11 @@ jobs:
       - id: set-matrix
         run: |
           EVENT_NAME="${{ github.event_name }}"
-          SELECTED_BROWSER="${{ inputs.browser }}"
+          # Dùng github.event.inputs.browser để lấy chính xác giá trị từ UI
+          SELECTED_BROWSER="${{ github.event.inputs.browser }}"
 
-          echo "Event Name: $EVENT_NAME"
-          echo "Selected Browser Input: $SELECTED_BROWSER"
+          echo "Trigger Event: $EVENT_NAME"
+          echo "Selected Browser: $SELECTED_BROWSER"
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             if [ "$SELECTED_BROWSER" = "chrome" ]; then
@@ -42,7 +43,7 @@ jobs:
               echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
             fi
           else
-            # Mặc định khi chạy tự động (push / pull_request / schedule)
+            # Khi tự động chạy (push/pull_request), chạy cả 2 trình duyệt
             echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
           fi
 
@@ -76,7 +77,7 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Upload Screenshots khi có Test Case Fail
+      # Upload Screenshots khi test FAIL
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -112,7 +113,6 @@ jobs:
         with:
           node-version: 22
 
-      # Download tất cả Allure Results từ các browser đã chạy
       - name: Download Allure Results Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -121,7 +121,6 @@ jobs:
           merge-multiple: true
         continue-on-error: true
 
-      # Parse Allure JSON & Gửi Notification tới Slack
       - name: Parse Allure Results and Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL02 }}
