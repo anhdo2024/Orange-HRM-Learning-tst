@@ -1,0 +1,1 @@
+[{"uid":"598efdde0063af3","name":"LOGIN_TC02: đăng nhập thất bại với password sai","time":{"start":1785996657505},"status":"unknown","severity":"normal"},{"uid":"1c6665294446bd0","name":"LOGIN_TC01: đăng nhập thành công với tài khoản hợp lệ","time":{"start":1785996603762,"stop":1785996657503,"duration":53741},"status":"failed","severity":"normal"}]

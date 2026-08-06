@@ -1,0 +1,3 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","53741","LOGIN_TC01: đăng nhập thành công với tài khoản hợp lệ","Login Module","2026-08-06","failed","2026-08-06","","","",""
+"","","LOGIN_TC02: đăng nhập thất bại với password sai","Login Module","2026-08-06","unknown","","","","",""
