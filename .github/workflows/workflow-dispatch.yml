@@ -1,10 +1,6 @@
 name: Workflow Dispatch Tests
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       browser:
@@ -18,7 +14,7 @@ on:
           - 'firefox'
 
 jobs:
-  # JOB 1: Xác định danh sách trình duyệt dựa trên trigger & input chọn lựa
+  # JOB 1: Xác định danh sách trình duyệt dựa trên input người dùng chọn
   setup-matrix:
     name: Setup Browser Matrix
     runs-on: ubuntu-latest
@@ -27,26 +23,19 @@ jobs:
     steps:
       - id: set-matrix
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          SELECTED_BROWSER: ${{ github.event.inputs.browser || inputs.browser }}
+          SELECTED_BROWSER: ${{ inputs.browser }}
         run: |
-          echo "Trigger Event: $EVENT_NAME"
           echo "Selected Browser: $SELECTED_BROWSER"
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            if [ "$SELECTED_BROWSER" = "chrome" ]; then
-              echo 'browsers=["chrome"]' >> $GITHUB_OUTPUT
-            elif [ "$SELECTED_BROWSER" = "firefox" ]; then
-              echo 'browsers=["firefox"]' >> $GITHUB_OUTPUT
-            else
-              echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
-            fi
+          if [ "$SELECTED_BROWSER" = "chrome" ]; then
+            echo 'browsers=["chrome"]' >> $GITHUB_OUTPUT
+          elif [ "$SELECTED_BROWSER" = "firefox" ]; then
+            echo 'browsers=["firefox"]' >> $GITHUB_OUTPUT
           else
-            # Khi tự động chạy (push/pull_request), mặc định chạy cả 2 trình duyệt
             echo 'browsers=["chrome", "firefox"]' >> $GITHUB_OUTPUT
           fi
 
-  # JOB 2: Chạy E2E Tests dựa trên Matrix linh hoạt
+  # JOB 2: Chạy E2E Tests dựa trên Matrix được chọn
   e2e-matrix:
     name: Test on ${{ matrix.browser }}
     needs: setup-matrix
