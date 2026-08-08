@@ -1,20 +1,20 @@
-import Page from './BasePage.js';
+import Page from "./BasePage.js";
 
 class EmployeeListPage extends Page {
   open() {
-    return super.open('pim/viewEmployeeList');
+    return super.open("pim/viewEmployeeList");
   }
 
   get employeeNameTbx() {
-    return $("//label[text()='Employee Name']/../following-sibling::div//input")
+    return $("//label[text()='Employee Name']/../following-sibling::div//input");
   }
 
   get submitBtn() {
-    return $("//button[@type='submit']")
+    return $("//button[@type='submit']");
   }
 
   get employeeRows() {
-    return $$("//div[@class='oxd-table-body']//div[@role='row']")
+    return $$("//div[@class='oxd-table-body']//div[@role='row']");
   }
 
   async searchEmployeeByName(name) {

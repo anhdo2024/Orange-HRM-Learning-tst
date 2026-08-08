@@ -1,17 +1,16 @@
-import LoginPage from '../pageobjects/LoginPage.js';
-import EmployeeListPage from '../pageobjects/EmployeeListPage.js';
+import EmployeeListPage from "../pageobjects/EmployeeListPage.js";
+import LoginPage from "../pageobjects/LoginPage.js";
 
-describe('Employee List', () => {
+describe("Employee List", () => {
   before(async () => {
     await LoginPage.open();
-    await LoginPage.login('Admin', 'admin123');
-  })
+    await LoginPage.login("Admin", "admin123");
+  });
 
-  it('TC01: Search employee by name', async () => {
+  it("TC01: Search employee by name", async () => {
     await EmployeeListPage.open();
-    await EmployeeListPage.searchEmployeeByName('John Doe');
+    await EmployeeListPage.searchEmployeeByName("John Doe");
 
-    await expect(EmployeeListPage.employeeRows).toBeElementsArrayOfSize(1)
-  })
-})
-
+    await expect(EmployeeListPage.employeeRows).toBeElementsArrayOfSize(1);
+  });
+});
