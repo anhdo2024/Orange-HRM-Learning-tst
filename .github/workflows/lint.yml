@@ -12,4 +12,4 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npx prettier --check "**/*.{js,json}"
+      - run: npx prettier --check "**/*.{js,ts,jsx,tsx}" --ignore-path .gitignore
