@@ -1,5 +1,4 @@
 import EmployeeListPage from "../pageobjects/EmployeeListPage.js";
-
 import LoginPage from "../pageobjects/LoginPage.js";
 
 describe("Employee List", () => {
