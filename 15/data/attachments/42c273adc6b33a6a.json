@@ -1,0 +1,4 @@
+{
+  "using": "xpath",
+  "value": "//h6[text()=\"Dashboard\"]"
+}
