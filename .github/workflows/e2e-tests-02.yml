@@ -5,19 +5,19 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  schedule:
-    # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
-    - cron: '0 2 * * *'
+     #schedule: 
+# Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
+     # - cron: '0 2 * * *'
   workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
 
 jobs:
-  e2e-matrix:
-    name: Test on ${{ matrix.browser }}
+  e2e-matrix-docker:
+    name: Docker runner - ${{ matrix.browser }}
     runs-on: [self-hosted, luke02]
     strategy:
       fail-fast: false
       matrix:
-        browser: [chrome, firefox]
+        browser: [chrome]
 
     steps:
       - name: Checkout repository code
@@ -44,7 +44,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: error-screenshots-${{ matrix.browser }}
+          name: docker-error-screenshots-${{ matrix.browser }}
           path: screenshots/
           if-no-files-found: ignore
           retention-days: 7
@@ -54,7 +54,53 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-${{ matrix.browser }}
+          name: docker-allure-results-${{ matrix.browser }}
+          path: allure-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  e2e-matrix-ubuntu:
+    name: GitHub Ubuntu - ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chrome, firefox]
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run WebdriverIO Tests
+        run: npx wdio run wdio.conf.js --browser ${{ matrix.browser }}
+        env:
+          CI: true
+          BASE_URL: ${{ secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+      - name: Upload Error Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-error-screenshots-${{ matrix.browser }}
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-allure-results-${{ matrix.browser }}
           path: allure-results/
           if-no-files-found: ignore
           retention-days: 7
@@ -62,7 +108,7 @@ jobs:
   notify-team-channel:
     name: Send Slack notification
     if: always()
-    needs: e2e-matrix
+    needs: [e2e-matrix-docker, e2e-matrix-ubuntu]
     runs-on: ubuntu-latest
     steps:
       - name: Send Slack notification
@@ -76,5 +122,5 @@ jobs:
 
           curl --fail-with-body --silent --show-error \
             -H 'Content-Type: application/json' \
-            --data '{"text":"E2E tests completed with status: ${{ needs.e2e-matrix.result }}\nRepository: ${{ github.repository }}\nBranch or ref: ${{ github.ref_name }}\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            --data '{"text":"E2E tests completed. Docker runner: ${{ needs.e2e-matrix-docker.result }}; GitHub Ubuntu: ${{ needs.e2e-matrix-ubuntu.result }}\nRepository: ${{ github.repository }}\nBranch or ref: ${{ github.ref_name }}\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
             "$SLACK_WEBHOOK_URL"
