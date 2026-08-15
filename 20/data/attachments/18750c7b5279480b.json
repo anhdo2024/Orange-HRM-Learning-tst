@@ -1,0 +1,5 @@
+{
+  "error": "no such element",
+  "message": "no such element: Unable to locate element: {\"method\":\"xpath\",\"selector\":\"//h6[text()=\"Dashboard\"]\"}\n  (Session info: chrome=152.0.7977.42)",
+  "stacktrace": "#0 0x55c4ddad62ca <unknown>\n#1 0x55c4dd439b39 <unknown>\n#2 0x55c4dd48f8d5 <unknown>\n#3 0x55c4dd48fb41 <unknown>\n#4 0x55c4dd4daa54 <unknown>\n#5 0x55c4dd4d7c63 <unknown>\n#6 0x55c4dd482ecb <unknown>\n#7 0x55c4dd483cb1 <unknown>\n#8 0x55c4dda9a7f0 <unknown>\n#9 0x55c4dda98e6a <unknown>\n#10 0x55c4dda83bb5 <unknown>\n#11 0x55c4dda99b2a <unknown>\n#12 0x55c4dda6cdf0 <unknown>\n#13 0x55c4ddac1238 <unknown>\n#14 0x55c4ddac13d5 <unknown>\n#15 0x55c4ddad4e53 <unknown>\n#16 0x7f7f9d49cb84 <unknown>\n#17 0x7f7f9d529d6c <unknown>\n"
+}
