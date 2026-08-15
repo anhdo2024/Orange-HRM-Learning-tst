@@ -1,0 +1,9 @@
+node_modules
+allure-results
+allure-report
+screenshots
+.git
+.env
+.env.runner
+.github
+

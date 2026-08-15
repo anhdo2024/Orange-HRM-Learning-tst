@@ -5,6 +5,7 @@
 .idea
 .claude
 .env
+.env.runner
 
 tmp
 node_modules

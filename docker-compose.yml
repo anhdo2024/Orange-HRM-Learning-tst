@@ -1,0 +1,18 @@
+services:
+  self-hosted-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orange-self-hosted-runner
+    restart: unless-stopped
+    environment:
+      BASE_URL: "${BASE_URL:-https://opensource-demo.orangehrmlive.com}"
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-Admin}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin123}"
+    stdin_open: true
+    tty: true
+    volumes:
+      - runner-data:/runner
+
+volumes:
+  runner-data:

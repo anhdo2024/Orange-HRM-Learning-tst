@@ -1,0 +1,25 @@
+name: Manual Docker Self-Hosted Runner Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: [self-hosted, docker-manual]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use dependencies installed in the runner image
+        run: cp -a /opt/orange-hrm/node_modules ./node_modules
+      - name: Run WebdriverIO tests
+        run: npm run wdio
+        env:
+          CI: true
+          BASE_URL: ${{ vars.BASE_URL || secrets.BASE_URL }}
+          ADMIN_USERNAME: ${{ vars.ADMIN_USERNAME || secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ vars.ADMIN_PASSWORD || secrets.ADMIN_PASSWORD }}
+      - name: Runner information
+        run: |
+          uname -a
+          terraform version || true
+          aws --version || true
+          docker --version || true

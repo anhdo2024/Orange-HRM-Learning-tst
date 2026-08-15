@@ -6,14 +6,14 @@ on:
   pull_request:
     branches: [ main, master ]
   schedule:
-    # Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
+    # Cháº¡y tá»± Ä‘á»™ng lÃºc 2:00 sÃ¡ng UTC má»—i ngÃ*y (tÆ°Æ¡ng Ä‘Æ°Æ¡ng 9:00 sÃ¡ng giá» Viá»‡t Nam GMT+7)
     - cron: '0 2 * * *'
-  workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
+  workflow_dispatch: # Cho phÃ©p báº¥m nÃºt cháº¡y thá»§ cÃ´ng tá»« tab Actions
 
 jobs:
   e2e-matrix:
     name: Test on ${{ matrix.browser }}
-    runs-on: [self-hosted, luke]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +39,7 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Upload Screenshots khi test FAIL - Bỏ qua cảnh báo nếu không có ảnh
+      # Upload screenshots only when tests fail.
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -49,7 +49,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Upload Allure results - Bỏ qua cảnh báo nếu không có kết quả
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,3 +77,4 @@ jobs:
             -H 'Content-Type: application/json' \
             --data '{"text":"E2E tests completed with status: ${{ needs.e2e-matrix.result }}\nRepository: ${{ github.repository }}\nBranch or ref: ${{ github.ref_name }}\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
             "$SLACK_WEBHOOK_URL"
+

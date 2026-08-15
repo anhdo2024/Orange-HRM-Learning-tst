@@ -1,0 +1,23 @@
+# .clinerules - Project ORANGE-HRM-LEARNING
+
+## 1. Framework & Environment
+- **Tech Stack**: WebdriverIO v9 + Mocha, JavaScript ES Module (`import`/`export`).
+- **Target App**: OrangeHRM (https://opensource-demo.orangehrmlive.com).
+- **Environment**: Chạy test đa môi trường, không hardcode URL hay credentials — quản lý thông qua biến môi trường (`process.env`).
+
+## 2. Page Object Model (POM) Rules
+- **Element Locator**: Mọi element phải được khai báo dạng **GETTER** trong Page Class (`get usernameInput() { return $('#app ...'); }`), tuyệt đối không khai báo trong `constructor`.
+- **Inheritance & Export**: Mọi Page Class phải kế thừa từ `Page` cơ sở (Base Page) và `export default new PageName()` (export singleton instance).
+- **Action Methods**: Viết các hàm hành động rõ ràng, nguyên tử (atomic) thể hiện luồng người dùng (ví dụ: `async login(username, password)`).
+
+## 3. Assertion Rules
+- **Nơi đặt Assertion**: Mọi assertion (`expect(...)`) bắt buộc nằm trong file **Spec/Test**, KHÔNG ĐƯỢC đặt assertion bên trong file Page Object.
+- **Web-First Assertions**: Ưu tiên sử dụng matcher bất đồng bộ native của WDIO (ví dụ: `await expect(element).toBeDisplayed()`, `await expect(browser).toHaveUrl(...)`).
+
+## 4. File Naming Conventions
+- **Page Objects**: Đặt tên dạng `PascalCase` kèm hậu tố `.page.js` (ví dụ: `login.page.js`, `dashboard.page.js`) nằm trong thư mục `test/pageobjects/`.
+- **Spec Files**: Đặt tên dạng `kebab-case` kèm hậu tố `.spec.js` hoặc `.e2e.js` (ví dụ: `login-failure.spec.js`, `add-employee.spec.js`) nằm trong thư mục `test/specs/`.
+
+## 5. Strict Prohibitions (Điều KHÔNG ĐƯỢC làm)
+- **KHÔNG dùng pause cố định**: Tuyệt đối không dùng `browser.pause(ms)` để chờ cứng (hard wait). Bắt buộc dùng wait theo điều kiện dynamic (ví dụ: `waitForDisplayed()`, `waitForClickable()`, `waitUntil()`).
+- **KHÔNG dùng XPath tuyệt đối**: Tránh dùng XPath dạng `/html/body/...`. Ưu tiên CSS Selector, Accessibility/ARIA attributes (`role`, `placeholder`, `name`), hoặc XPath tương đối ngắn gọn.
