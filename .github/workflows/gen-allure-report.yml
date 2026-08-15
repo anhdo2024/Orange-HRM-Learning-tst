@@ -2,7 +2,7 @@ name: generate-allure-report
 
 on:
   push:
-   # branches: [ main, master ]
+   # branches: [ ]
   pull_request:
    # branches: [ main, master ]
   schedule:

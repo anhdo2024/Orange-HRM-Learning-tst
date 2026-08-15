@@ -249,16 +249,26 @@ Cases that depend on the demo's unstable behavior are marked `it.skip` with a `T
 
 ## Docker self-hosted runner
 
-The active local setup uses one persistent Docker container. The image installs Node.js 22, npm dependencies from `package-lock.json`, Google Chrome, Git, Docker CLI, and the utilities needed to install a GitHub Actions runner manually. It does not register an agent automatically.
+The active local setup uses Docker containers as manually configured self-hosted runners. The image installs Node.js 22, npm dependencies from `package-lock.json`, Google Chrome, Firefox, Git, Docker CLI, and the utilities needed to install a GitHub Actions runner. It does not register an agent automatically.
+
+The shared custom label is set in one place in [`docker-compose.yml`](docker-compose.yml):
+
+```yaml
+RUNNER_LABEL: "${RUNNER_LABEL:-luke}"
+```
+
+The workflow must use the same label, for example `runs-on: [self-hosted, luke]`.
 
 Docker Desktop must be running in **Linux container mode**.
 
 ### Build and start the container
 
 ```powershell
-docker compose up -d --build self-hosted-runner
-docker exec -it orange-self-hosted-runner bash
+docker compose up -d --build --scale self-hosted-runner=2 self-hosted-runner
+docker compose ps
 ```
+
+Compose creates separate containers for parallel agents, for example `...-self-hosted-runner-1` and `...-self-hosted-runner-2`. Each container has its own anonymous `/runner` volume and must be registered as a separate GitHub runner.
 
 Inside the container, install and configure the GitHub Actions agent manually. Replace the URL and token with values from the repository's `Settings → Actions → Runners → New self-hosted runner` page:
 
@@ -270,15 +280,22 @@ tar xzf actions-runner-linux-x64-2.329.0.tar.gz
 ./config.sh --unattended \
   --url https://github.com/OWNER/REPOSITORY \
   --token YOUR_ONE_TIME_TOKEN \
-  --name orange-docker-runner \
-  --labels docker-manual \
+  --name "luke-${HOSTNAME}" \
+  --labels "${RUNNER_LABEL:-luke}" \
   --work /runner/_work
 ./run.sh
 ```
 
-Keep this terminal running. In GitHub, open [docker-ephemeral-runner-test.yml](.github/workflows/docker-ephemeral-runner-test.yml), choose **Run workflow**, and select the branch. The job uses `runs-on: [self-hosted, docker-manual]`, checks out the repository, reuses the preinstalled `node_modules`, and runs the WebdriverIO tests.
+Run the same setup in each scaled container. From PowerShell, open each one separately:
 
-When `package-lock.json` changes, rebuild the image with `docker compose build --no-cache self-hosted-runner`. Source-code changes only require rebuilding when you want to update the image's copied source; the workflow checks out the selected Git revision before running.
+```powershell
+docker compose exec --index 1 self-hosted-runner bash
+docker compose exec --index 2 self-hosted-runner bash
+```
+
+Keep one `./run.sh` terminal open for each container. GitHub can then assign matrix jobs to the available `self-hosted` runners with the `luke` label in parallel. In GitHub, open [e2e-tests-02.yml](.github/workflows/e2e-tests-02.yml) and choose **Run workflow**.
+
+When `package-lock.json` changes, rebuild the image with `docker compose build --no-cache self-hosted-runner`, then recreate the scaled containers and register each new runner. Source-code changes only require rebuilding when you want to update the image's copied source; the workflow checks out the selected Git revision before running.
 
 The previous webhook-driven manager remains under `runner-manager/` for possible future use, but it is not part of the active Compose stack.
 - `baseUrl` is preset in `wdio.conf.js`, so `open('auth/login')` is automatically resolved to the full URL.
