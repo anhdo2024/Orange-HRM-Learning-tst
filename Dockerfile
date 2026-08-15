@@ -1,5 +1,6 @@
 FROM node:22-bookworm
 
+ARG RUNNER_VERSION=2.336.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
@@ -15,13 +16,21 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --shell /bin/bash runner
+RUN mkdir -p /opt/actions-runner \
+    && curl -fsSL -o /tmp/actions-runner.tar.gz \
+       "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
+    && tar -xzf /tmp/actions-runner.tar.gz -C /opt/actions-runner \
+    && rm /tmp/actions-runner.tar.gz \
+    && chown -R runner:runner /opt/actions-runner
 WORKDIR /opt/orange-hrm
 
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN chown -R runner:runner /opt/orange-hrm
+COPY runner-entrypoint.sh /usr/local/bin/runner-entrypoint.sh
+RUN chmod +x /usr/local/bin/runner-entrypoint.sh \
+    && chown -R runner:runner /opt/orange-hrm /usr/local/bin/runner-entrypoint.sh
 
-USER runner
+USER root
 WORKDIR /opt/orange-hrm
-CMD ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["/usr/local/bin/runner-entrypoint.sh"]

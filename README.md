@@ -249,7 +249,7 @@ Cases that depend on the demo's unstable behavior are marked `it.skip` with a `T
 
 ## Docker self-hosted runner
 
-The active local setup uses Docker containers as manually configured self-hosted runners. The image installs Node.js 22, npm dependencies from `package-lock.json`, Google Chrome, Firefox, Git, Docker CLI, and the utilities needed to install a GitHub Actions runner. It does not register an agent automatically.
+The active local setup uses Docker containers as self-hosted runners. The image installs Node.js 22, npm dependencies from `package-lock.json`, Google Chrome, Firefox, Git, Docker CLI, and the utilities needed to install a GitHub Actions runner. Registration is manual once; after registration, the container starts the GitHub agent automatically.
 
 The shared custom label is set in one place in [`docker-compose.yml`](docker-compose.yml):
 
@@ -286,14 +286,23 @@ tar xzf actions-runner-linux-x64-2.329.0.tar.gz
 ./run.sh
 ```
 
-Run the same setup in each scaled container. From PowerShell, open each one separately:
+Run the setup once in each new or unregistered scaled container. From PowerShell, open each one separately:
 
 ```powershell
 docker compose exec --index 1 self-hosted-runner bash
 docker compose exec --index 2 self-hosted-runner bash
 ```
 
-Keep one `./run.sh` terminal open for each container. GitHub can then assign matrix jobs to the available `self-hosted` runners with the `luke` label in parallel. In GitHub, open [e2e-tests-02.yml](.github/workflows/e2e-tests-02.yml) and choose **Run workflow**.
+After `config.sh` succeeds, exit the shell. The container entrypoint detects `/runner/.runner` and starts `./run.sh` automatically. GitHub can then assign matrix jobs to the available `self-hosted` runners with the `luke` label in parallel. In GitHub, open [e2e-tests-02.yml](.github/workflows/e2e-tests-02.yml) and choose **Run workflow**.
+
+To restart the agent later:
+
+```powershell
+docker compose restart self-hosted-runner
+docker compose logs -f self-hosted-runner
+```
+
+The container will exit with a clear message if a new scaled container has not been registered yet. Configure that container once, then restart it.
 
 When `package-lock.json` changes, rebuild the image with `docker compose build --no-cache self-hosted-runner`, then recreate the scaled containers and register each new runner. Source-code changes only require rebuilding when you want to update the image's copied source; the workflow checks out the selected Git revision before running.
 
