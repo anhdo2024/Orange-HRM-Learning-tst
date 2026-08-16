@@ -65,10 +65,10 @@ export const config = {
       browserName: "chrome",
       browserVersion: "stable",
       "goog:chromeOptions": {
-        args: ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--window-size=1920,1080"],
+        args: ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--window-size=1920,1080"
       },
       "moz:firefoxOptions": {
-        args: ["-headless"],
+        args: ["-headless", "-width=1920", "-height=1080"],
       },
     },
   ],
