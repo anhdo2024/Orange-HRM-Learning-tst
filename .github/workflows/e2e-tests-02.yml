@@ -5,10 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-     #schedule: 
-# Chạy tự động lúc 2:00 sáng UTC mỗi ngày (tương đương 9:00 sáng giờ Việt Nam GMT+7)
-     # - cron: '0 2 * * *'
-  workflow_dispatch: # Cho phép bấm nút chạy thủ công từ tab Actions
+  workflow_dispatch:
 
 jobs:
   e2e-matrix-docker:
@@ -17,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chrome]
+        browser: [chrome, firefox] # Đồng bộ cả Chrome và Firefox
 
     steps:
       - name: Checkout repository code
@@ -29,7 +26,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci # Dùng npm ci thay vì npm install
 
       - name: Run WebdriverIO Tests
         run: npx wdio run wdio.conf.js --browser ${{ matrix.browser }}
@@ -39,7 +36,6 @@ jobs:
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
-      # Upload Screenshots khi test FAIL - Bỏ qua cảnh báo nếu không có ảnh
       - name: Upload Error Screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -49,7 +45,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # Upload Allure results - Bỏ qua cảnh báo nếu không có kết quả
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4

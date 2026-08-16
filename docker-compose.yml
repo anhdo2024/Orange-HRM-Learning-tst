@@ -15,3 +15,7 @@ services:
     volumes:
       # Anonymous volume: every scaled container gets its own agent config.
       - /runner
+    services:
+    github-runner:
+    image: my-github-runner
+    shm_size: '2gb' # Cấp đủ dung lượng bộ nhớ chia sẻ cho Chrome
