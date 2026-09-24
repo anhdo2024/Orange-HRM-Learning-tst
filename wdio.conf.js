@@ -2,6 +2,7 @@
 import allureReporter from '@wdio/allure-reporter';
 import fs from 'fs';
 import path from 'path';
+const isDocker = process.env.RUNNING_IN_DOCKER === 'true';
 
 
 export const config = {
@@ -65,8 +66,9 @@ export const config = {
         browserName: 'chrome',
         browserVersion: 'stable',
         'goog:chromeOptions': {
-            args: process.env.CI
-                ? ['--headless=new', '--no-sandbox', '--disable-gpu', '--window-size=1920,1080']
+            args: process.env.CI || isDocker
+            
+                ? ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--window-size=1920,1080']
                 : []
         },
         'moz:firefoxOptions': {
